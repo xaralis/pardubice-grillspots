@@ -5,21 +5,39 @@
     </l-map>
 
     <div class="save-msg save-msg-success" v-if="saved">
-      Děkujeme, váš pondět byl odeslán. Překontrolujeme ho a následně ho uveřejníme.
+      3. Děkujeme, <strong>váš podnět byl odeslán</strong>. Překontrolujeme ho a následně ho uveřejníme.
     </div>
 
     <div class="save-msg save-msg-error" v-if="errored">
       Omlouváme se, při ukládání vašeho podnětu došlo k chybě.
     </div>
 
+    <div class="splash" v-show="splashDisplayed">
+      <div class="splash-content">
+        <h1 class="title">Požádejte městský obvod o vybudování griloviště u vašeho domu</h1>
+        <p>Městský obvod Pardubice V pořádá veřejnou výzvu a občané jej mohou požádat o vybudování veřejného griloviště vedle jejich bytového domu.</p>
+        <h2>Jak na to?</h2>
+        <div class="splash-steps-wrap">
+          <ol>
+            <li>Zvolte na mapě, kde byste chtěli griloviště postavit.</li>
+            <li>Vyplňte krátký formulář s doplňkovými informacemi.</li>
+            <li>Obvod vás bude kontaktovat.</li>
+          </ol>
+        </div>
+        <button type="submit" class="button" @click="splashDisplayed = false">Jdu na to</button>
+      </div>
+    </div>
+
+    <div class="step-1-caption" v-show="!formDisplayed && !splashDisplayed && !saved"><h1>1. Vyberte místo na mapě</h1></div>
+
     <div ref="formWrap" class="form-wrap" v-show="formDisplayed">
       <form class="form" @submit="checkForm" method="post">
-        <h1 class="title">Požádejte městský obvod o vybudování griloviště u vašeho domu</h1>
+        <h1 class="title">2. Doplňte pár nezbytností</h1>
         <p>Odesílání vašich návrhů je možné <strong>do konce ledna 2020</strong>. Abychom vám to usnadnili, můžete svůj návrh podat pomocí jednoduchého online formuláře.</p>
         <p>Při odesílání vašeho návrhu se prosím zamyslete, zda je na daném místě griloviště skutečně možné vybudovat. Ideální je rovněž váš nápad zkonzultovat s SVJ příslušných bytových domů.</p>
 
         <div class="form-control">
-          <input type="text" placeholder="Vaše jméno" required v-model="myMarkerMetadata.name" />
+          <input type="text" placeholder="Vaše jméno" required v-model="myMarkerMetadata.name" autofocus />
         </div>
         <div class="form-control">
           <input type="email" placeholder="Váš email" required v-model="myMarkerMetadata.email" />
@@ -31,7 +49,7 @@
           <textarea name="svj" cols="30" rows="10" placeholder="Poznámka" v-model="myMarkerMetadata.note"></textarea>
         </div>
 
-        <button type="submit">Odeslat</button>
+        <button type="submit" class="button">Odeslat</button>
         <p>
           <strong>Poznámka:</strong> Odesláním vašeho podnětu nevzniká žádná garance, že na daném místě griloviště skutečně vznikne. Piráti podněty pouze sesbírají a ve vhodnou chvíli je předají vedení městského obvodu, abychom pro vás celou proceduru co nejvíce usnadnili. Konečné rozhodnutí ovšem bude na vedení obvodu, který vás bude po uplynutí lhůty pro navrhování kontaktovat.
         </p>
@@ -85,6 +103,7 @@ export default {
         note: null,
       },
       currentMarker: null,
+      splashDisplayed: true,
       formDisplayed: false,
       saved: false,
       errored: false,
@@ -240,6 +259,51 @@ export default {
   margin-top: 0;
 }
 
+.splash {
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  position: absolute;
+  z-index: 2;
+  background: rgba(0, 0, 0, .8);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+
+  &-content {
+    max-width: 30em;
+  }
+
+  &-steps-wrap {
+    display: flex;
+  }
+
+  h2 {
+    margin-top: 3rem;
+  }
+
+  ol {
+    text-align: left;
+    margin: auto;
+    margin-bottom: 3rem;
+  }
+}
+
+.step-1-caption {
+  top: 3rem;
+  right: 3rem;
+  position: absolute;
+  z-index: 2;
+
+  h1 {
+    margin: 0;
+    text-shadow: 0 0 1rem #ffffff;
+  }
+}
+
 .form-wrap {
   top: 0;
   right: 0;
@@ -266,54 +330,8 @@ export default {
     }
   }
 
-  input {
-    width: 100%;
-    display: block;
-    border: 0;
-    margin-bottom: 1rem;
-    height: 3rem;
-    line-height: 3rem;
-    padding: 0 1rem;
-  }
-
-  textarea {
-    height: 12rem;
-    padding: 1rem;
-  }
-
-  button {
-    border: 0;
-    background-color: rgba(0, 0, 0, .4);
-    padding: 1rem 3rem;
-    color: #fff;
-    font-size: 1.5rem;
-    transition: background-color .3s ease-in-out;
-    cursor: pointer;
-    font-family: 'Bebas Neue';
-
-    &:hover {
-      background-color: rgba(0, 0, 0, 1);
-    }
-  }
-
   input, textarea {
-    width: 100%;
-    display: block;
-    border: 0;
-    background-color: rgba(255, 255, 255, 0.8);
     margin-bottom: 1rem;
-    font-size: 1.5rem;
-    transition: background-color .3s ease-in-out;
-  }
-
-  input:focus, input:hover, textarea:focus, textarea:hover {
-    background-color: rgba(255, 255, 255, 1);
-    outline: none;
-  }
-
-  input::placeholder, textarea::placeholder {
-    color: rgba(0, 0, 0, 0.4);
-    font-size: 1.5rem;
   }
 }
 
