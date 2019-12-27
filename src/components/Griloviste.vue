@@ -129,14 +129,12 @@ export default {
         phone: null,
         note: null,
       },
-      currentMarker: null,
       splashDisplayed: true,
       formDisplayed: false,
       saved: false,
       errored: false,
       zoom: 15,
-      allSpots: [],
-      url:`https://api.mapbox.com/styles/v1/xaralis/ck4o42ead0ldk1co29xjfw1yv/tiles/256/{z}/{x}/{y}?access_token=${this.accessToken}`,
+      url:`https://api.mapbox.com/styles/v1/xaralis/ck4oblwty0fgk1fjzxmqow2r5/tiles/256/{z}/{x}/{y}@2x?access_token=${this.accessToken}`,
       attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
     }
   },
@@ -148,13 +146,13 @@ export default {
     onMapClick(evt) {
       this.errored = false;
 
-      if (this.myMarker && !this.saved) {
-        this.closeForm();
-      }
-
       if (!this.saved) {
+        if (this.myMarker) {
+          this.myMarker.removeFrom(this.map);
+        }
+
         this.myMarker = new L.marker(evt.latlng, { icon: palette.yellow.marker }).addTo(this.map).bindTooltip('Vaše nové griloviště').on('click', this.onMarkerClick);
-        this.formDisplayed = true;
+        this.showForm();
         this.panToMyMarker();
       }
     },
@@ -163,15 +161,17 @@ export default {
      * Handle click on my or some other marker.
      */
     onMarkerClick(evt) {
-      this.currentMarker = evt.target;
-      this.currentMarker.openTooltip();
+      const currentMarker = evt.target;
+      currentMarker.openTooltip();
 
-      if (this.currentMarker === this.myMarker) {
-        this.formDisplayed = true;
+      if (currentMarker === this.myMarker) {
+        if (!this.saved) {
+          this.showForm();
+        }
         this.panToMyMarker();
       } else {
-        this.formDisplayed = false;
-        this.map.panTo(this.currentMarker.getLatLng());
+        this.closeForm();
+        this.map.panTo(currentMarker.getLatLng());
       }
     },
 
@@ -203,16 +203,14 @@ export default {
         marker.bindTooltip(`Návrh od ${marker.$spot.attributes.posted_by} z ${marker.$spot.createdAt.toLocaleDateString()}`);
         marker.addTo(this.map).on('click', this.onMarkerClick);
       });
+    },
 
-      this.allSpots = results;
+    showForm() {
+      this.formDisplayed = true;
     },
 
     closeForm() {
-      if (this.myMarker && !this.saved) {
-        this.myMarker.removeFrom(this.map);
-        this.myMarker = null;
-        this.formDisplayed = false;
-      }
+      this.formDisplayed = false;
     },
 
     /**
@@ -254,8 +252,7 @@ export default {
           await newSpotProfile.save();
 
           this.saved = true;
-          this.formDisplayed = false;
-          this.allSpots.push(newSpot);
+          this.closeForm();
 
           this.myMarker.$spot = newSpot;
           // Add click evt to my current marker
@@ -360,22 +357,26 @@ export default {
   float: right;
   width: 1.5rem;
   height: 1.5rem;
-  margin: -1rem -1.5rem 0 0;
+  margin: -2rem -1.5rem 0 0;
   cursor: pointer;
+
+  @media (min-width: 768px) {
+    margin-top: -1rem;
+  }
 }
 
 .form-wrap {
   position: absolute;
-  top: 20%;
+  top: 25%;
   right: 0;
-  height: 80%;
+  height: 75%;
   width: 100%;
   z-index: 2;
   background: rgba(0, 0, 0, .8);
   color: #fff;
   text-align: left;
   overflow-y: scroll;
-  padding: 2rem;
+  padding: 3rem 2rem;
 
   @media (min-width: 768px) {
     padding: 2rem 3rem;
