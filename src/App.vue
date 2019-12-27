@@ -50,6 +50,8 @@ b, strong {
 
 .button {
   border: 0;
+  width: 100%;
+  display: inline-block;
   background-color: rgba(0, 0, 0, .4);
   padding: 1rem 3rem;
   color: #fff;
@@ -60,6 +62,10 @@ b, strong {
 
   &:hover {
     background-color: rgba(0, 0, 0, 1);
+  }
+
+  @media (min-width: 768px) {
+    width: auto;
   }
 }
 
@@ -77,7 +83,6 @@ b, strong {
     height: 12rem;
     padding: 1rem;
   }
-
 
   input, textarea {
     width: 100%;

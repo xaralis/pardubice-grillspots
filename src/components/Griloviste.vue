@@ -1,5 +1,5 @@
 <template>
-  <div class="wrapper">
+  <div class="wrapper" @keydown.esc="closeForm">
     <l-map ref="map" class="map" :zoom="zoom">
       <l-tile-layer :url="url" :attribution="attribution"></l-tile-layer>
     </l-map>
@@ -21,7 +21,7 @@
           <ol>
             <li>Zvolte na mapě, kde byste chtěli griloviště postavit.</li>
             <li>Vyplňte krátký formulář s doplňkovými informacemi.</li>
-            <li>Obvod vás bude kontaktovat.</li>
+            <li>Váš podnět předáme vedení městského obvodu.</li>
           </ol>
         </div>
         <button type="submit" class="button" @click="splashDisplayed = false">Jdu na to</button>
@@ -31,13 +31,16 @@
     <div class="step-1-caption" v-show="!formDisplayed && !splashDisplayed && !saved"><h1>1. Vyberte místo na mapě</h1></div>
 
     <div ref="formWrap" class="form-wrap" v-show="formDisplayed">
+      <a @click="closeForm" class="close"><img src="./close.svg"></a>
+
       <form class="form" @submit="checkForm" method="post">
         <h1 class="title">2. Doplňte pár nezbytností</h1>
         <p>Odesílání vašich návrhů je možné <strong>do konce ledna 2020</strong>. Abychom vám to usnadnili, můžete svůj návrh podat pomocí jednoduchého online formuláře.</p>
         <p>Při odesílání vašeho návrhu se prosím zamyslete, zda je na daném místě griloviště skutečně možné vybudovat. Ideální je rovněž váš nápad zkonzultovat s SVJ příslušných bytových domů.</p>
 
         <div class="form-control">
-          <input type="text" placeholder="Vaše jméno" required v-model="myMarkerMetadata.name" autofocus />
+          <input type="text" placeholder="Vaše jméno" required v-model="myMarkerMetadata.firstName" autofocus />
+          <input type="text" placeholder="Vaše příjmení" required v-model="myMarkerMetadata.lastName" />
         </div>
         <div class="form-control">
           <input type="email" placeholder="Váš email" required v-model="myMarkerMetadata.email" />
@@ -46,7 +49,10 @@
           <input type="phone" placeholder="Váš telefon" required v-model="myMarkerMetadata.phone" />
         </div>
         <div class="form-control">
-          <textarea name="svj" cols="30" rows="10" placeholder="Poznámka" v-model="myMarkerMetadata.note"></textarea>
+          <input type="text" placeholder="Dům za který žádáte (např. Josefa Ressla 123)" required v-model="myMarkerMetadata.house" />
+        </div>
+        <div class="form-control">
+          <textarea name="note" cols="30" rows="10" placeholder="Poznámka (nepovinné)" v-model="myMarkerMetadata.note"></textarea>
         </div>
 
         <button type="submit" class="button">Odeslat</button>
@@ -77,6 +83,26 @@ Parse.initialize(process.env.VUE_APP_PARSE_APP_ID, process.env.VUE_APP_PARSE_APP
 const Spot = Parse.Object.extend('Spot');
 const SpotProfile = Parse.Object.extend('SpotPublicProfile');
 
+const palette = {
+  black: {
+    color: '#000000',
+    icon: require('./grill-black.svg'),
+  },
+  yellow: {
+    color: '#ffcd00',
+    icon: require('./grill-yellow.svg'),
+  },
+};
+
+Object.keys(palette).forEach(key => {
+  palette[key].marker = new L.Icon({
+    iconUrl: palette[key].icon,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+    // popupAnchor: [25, 16],
+  });
+});
+
 export default {
   props: {
     /**
@@ -97,7 +123,8 @@ export default {
       map: null,
       myMarker: null,
       myMarkerMetadata: {
-        name: null,
+        firstName: null,
+        lastName: null,
         email: null,
         phone: null,
         note: null,
@@ -109,7 +136,7 @@ export default {
       errored: false,
       zoom: 15,
       allSpots: [],
-      url:`https://api.tiles.mapbox.com/v4/mapbox.light/{z}/{x}/{y}.png?access_token=${this.accessToken}`,
+      url:`https://api.mapbox.com/styles/v1/xaralis/ck4o42ead0ldk1co29xjfw1yv/tiles/256/{z}/{x}/{y}?access_token=${this.accessToken}`,
       attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
     }
   },
@@ -122,11 +149,11 @@ export default {
       this.errored = false;
 
       if (this.myMarker && !this.saved) {
-        this.myMarker.removeFrom(this.map);
+        this.closeForm();
       }
 
       if (!this.saved) {
-        this.myMarker = new L.marker(evt.latlng).addTo(this.map).bindTooltip('Vaše nové místo').on('click', this.onMarkerClick);
+        this.myMarker = new L.marker(evt.latlng, { icon: palette.yellow.marker }).addTo(this.map).bindTooltip('Vaše nové griloviště').on('click', this.onMarkerClick);
         this.formDisplayed = true;
         this.panToMyMarker();
       }
@@ -150,10 +177,19 @@ export default {
 
     panToMyMarker() {
       this.$nextTick(() => {
-        // form takes up 60% the elem width, center in the place that is left
-        const xOffset = this.$refs.formWrap.getBoundingClientRect().width * -0.5;
+        let xOffset = 0;
+        let yOffset = 0;
+
+        // On large screens, point is visible directly.
+        if (this.$el.getBoundingClientRect().width >= 768) {
+          // form takes up 60% the elem width, center in the place that is left
+          xOffset = this.$refs.formWrap.getBoundingClientRect().width * -0.5;
+        } else {
+          yOffset = this.$refs.formWrap.getBoundingClientRect().height * -0.5;
+        }
+
         const latLng = this.myMarker.getLatLng();
-        this.map.panToOffset(latLng, [xOffset, 0]);
+        this.map.panToOffset(latLng, [xOffset, yOffset]);
       });
     },
 
@@ -162,13 +198,21 @@ export default {
      */
     onSpotsLoaded(results) {
       results.forEach(r => {
-        const marker = new L.marker(L.latLng(r.attributes.latlng.latitude, r.attributes.latlng.longitude));
+        const marker = new L.marker(L.latLng(r.attributes.latlng.latitude, r.attributes.latlng.longitude), { icon: palette.black.marker });
         marker.$spot = r;
-        marker.bindTooltip(`Přidáno ${marker.$spot.createdAt.toLocaleDateString()}`);
+        marker.bindTooltip(`Návrh od ${marker.$spot.attributes.posted_by} z ${marker.$spot.createdAt.toLocaleDateString()}`);
         marker.addTo(this.map).on('click', this.onMarkerClick);
       });
 
       this.allSpots = results;
+    },
+
+    closeForm() {
+      if (this.myMarker && !this.saved) {
+        this.myMarker.removeFrom(this.map);
+        this.myMarker = null;
+        this.formDisplayed = false;
+      }
     },
 
     /**
@@ -177,7 +221,7 @@ export default {
     async checkForm(event) {
       event.preventDefault();
 
-      if (this.myMarkerMetadata.name && this.myMarkerMetadata.email && this.myMarkerMetadata.phone && this.myMarker) {
+      if (this.myMarkerMetadata.firstName && this.myMarkerMetadata.lastName && this.myMarkerMetadata.email && this.myMarkerMetadata.phone && this.myMarkerMetadata.house && this.myMarker) {
         const newSpot = new Spot();
         const newSpotProfile = new SpotProfile();
         const spotProfileACL = new Parse.ACL();
@@ -188,6 +232,7 @@ export default {
         spotProfileACL.setPublicReadAccess(true);
         spotProfileACL.setPublicWriteAccess(false);
         newSpotProfile.setACL(spotProfileACL);
+        newSpotProfile.set('posted_by', `${this.myMarkerMetadata.firstName} ${this.myMarkerMetadata.lastName.substring(0, 1)}.`);
         newSpotProfile.set('latlng', new Parse.GeoPoint({
           latitude: markerLatLng.lat,
           longitude: markerLatLng.lng,
@@ -196,9 +241,11 @@ export default {
         spotACL.setPublicReadAccess(false);
         spotACL.setPublicWriteAccess(false);
         newSpot.setACL(spotACL);
-        newSpot.set('name', this.myMarkerMetadata.name);
+        newSpot.set('first_name', this.myMarkerMetadata.firstName);
+        newSpot.set('last_name', this.myMarkerMetadata.lastName);
         newSpot.set('phone', this.myMarkerMetadata.phone);
         newSpot.set('email', this.myMarkerMetadata.email);
+        newSpot.set('house', this.myMarkerMetadata.house);
         newSpot.set('note', this.myMarkerMetadata.note);
 
         newSpotProfile.set('spot', newSpot);
@@ -265,13 +312,17 @@ export default {
   right: 0;
   bottom: 0;
   position: absolute;
+  padding: 1rem;
   z-index: 2;
   background: rgba(0, 0, 0, .8);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.5rem;
+
+  @media (min-width: 768px) {
+    font-size: 1.5rem;
+  }
 
   &-content {
     max-width: 30em;
@@ -293,8 +344,8 @@ export default {
 }
 
 .step-1-caption {
-  top: 3rem;
-  right: 3rem;
+  top: 2rem;
+  right: 2rem;
   position: absolute;
   z-index: 2;
 
@@ -304,19 +355,36 @@ export default {
   }
 }
 
+.close {
+  display: block;
+  float: right;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin: -1rem -1.5rem 0 0;
+  cursor: pointer;
+}
+
 .form-wrap {
-  top: 0;
-  right: 0;
   position: absolute;
+  top: 20%;
+  right: 0;
+  height: 80%;
+  width: 100%;
   z-index: 2;
-  height: 100%;
-  width: 60%;
-  max-width: 40rem;
   background: rgba(0, 0, 0, .8);
   color: #fff;
   text-align: left;
-  padding: 2rem 3rem;
   overflow-y: scroll;
+  padding: 2rem;
+
+  @media (min-width: 768px) {
+    padding: 2rem 3rem;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: 60%;
+    max-width: 40rem;
+  }
 }
 
 .form {
@@ -325,6 +393,10 @@ export default {
   .form-control {
     width: 100%;
 
+    @media (min-width: 512px) {
+      display: flex;
+    }
+
     &:first-of-type {
       margin-top: 2rem;
     }
@@ -332,6 +404,12 @@ export default {
 
   input, textarea {
     margin-bottom: 1rem;
+  }
+
+  input + input {
+    @media (min-width: 512px) {
+      margin-left: 1rem;
+    }
   }
 }
 
