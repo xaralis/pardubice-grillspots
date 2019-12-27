@@ -26,6 +26,7 @@
         </div>
         <button type="submit" class="button" @click="splashDisplayed = false">Jdu na to</button>
       </div>
+      <img src="./pirati-brand.svg" alt="Piráti" class="splash-brand" />
     </div>
 
     <div class="step-1-caption" v-show="!formDisplayed && !splashDisplayed && !saved"><h1>1. Vyberte místo na mapě</h1></div>
@@ -309,13 +310,15 @@ export default {
   right: 0;
   bottom: 0;
   position: absolute;
-  padding: 1rem;
+  padding: 2rem;
   z-index: 2;
   background: rgba(0, 0, 0, .8);
   color: #fff;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  overflow-y: scroll;
 
   @media (min-width: 768px) {
     font-size: 1.5rem;
@@ -329,6 +332,15 @@ export default {
     display: flex;
   }
 
+  &-brand {
+    max-width: 6rem;
+    margin-top: 2rem;
+
+    @media (min-width: 768px) {
+      max-width: 8rem;
+    }
+  }
+
   h2 {
     margin-top: 3rem;
   }
@@ -336,6 +348,7 @@ export default {
   ol {
     text-align: left;
     margin: auto;
+    padding-left: 1rem;
     margin-bottom: 3rem;
   }
 }
