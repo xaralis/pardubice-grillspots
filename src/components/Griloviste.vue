@@ -37,7 +37,7 @@
       <form class="form" @submit="checkForm" method="post">
         <h1 class="title">2. Doplňte pár nezbytností</h1>
         <p>Odesílání vašich návrhů je možné <strong>do konce ledna 2020</strong>. Abychom vám to usnadnili, můžete svůj návrh podat pomocí jednoduchého online formuláře.</p>
-        <p>Při odesílání vašeho návrhu se prosím zamyslete, zda je na daném místě griloviště skutečně možné vybudovat. Ideální je rovněž váš nápad zkonzultovat s SVJ příslušných bytových domů.</p>
+        <p>Při odesílání vašeho návrhu se prosím zamyslete, zda je na daném místě <strong>griloviště skutečně možné vybudovat</strong>. Ideální je rovněž váš nápad zkonzultovat se zástupci SVJ příslušných bytových domů.</p>
 
         <div class="form-control">
           <input type="text" placeholder="Vaše jméno" required v-model="myMarkerMetadata.firstName" autofocus />
@@ -47,18 +47,19 @@
           <input type="email" placeholder="Váš email" required v-model="myMarkerMetadata.email" />
         </div>
         <div class="form-control">
-          <input type="phone" placeholder="Váš telefon" required v-model="myMarkerMetadata.phone" />
+          <input type="phone" placeholder="Váš telefon (nepovinné)" v-model="myMarkerMetadata.phone" />
         </div>
         <div class="form-control">
-          <input type="text" placeholder="Dům za který žádáte (např. Josefa Ressla 123)" required v-model="myMarkerMetadata.house" />
+          <input type="text" placeholder="Adresa domu, za který žádáte (např. Josefa Ressla 123)" required v-model="myMarkerMetadata.house" />
         </div>
         <div class="form-control">
           <textarea name="note" cols="30" rows="10" placeholder="Poznámka (nepovinné)" v-model="myMarkerMetadata.note"></textarea>
         </div>
 
         <button type="submit" class="button">Odeslat</button>
+        <p><strong>Odesláním formuláře souhlasíte s tím, že Piráti odešlou vaše kontaktní údaje MO Pardubice V. Vaše údaje poté smažeme a nebudeme používat k jiným účelům.</strong></p>
         <p>
-          <strong>Poznámka:</strong> Odesláním vašeho podnětu nevzniká žádná garance, že na daném místě griloviště skutečně vznikne. Piráti podněty pouze sesbírají a ve vhodnou chvíli je předají vedení městského obvodu, abychom pro vás celou proceduru co nejvíce usnadnili. Konečné rozhodnutí ovšem bude na vedení obvodu, který vás bude po uplynutí lhůty pro navrhování kontaktovat.
+          <strong>Poznámka:</strong> Odesláním vašeho podnětu nevzniká žádná garance, že na daném místě griloviště skutečně vznikne. Vaše podněty pouze sesbíráme a předáme vedení městského obvodu, abychom pro vás celou proceduru co nejvíce usnadnili. Konečné rozhodnutí ovšem bude na vedení obvodu, který vás bude po uplynutí lhůty pro navrhování kontaktovat.
         </p>
       </form>
     </div>
@@ -220,7 +221,7 @@ export default {
     async checkForm(event) {
       event.preventDefault();
 
-      if (this.myMarkerMetadata.firstName && this.myMarkerMetadata.lastName && this.myMarkerMetadata.email && this.myMarkerMetadata.phone && this.myMarkerMetadata.house && this.myMarker) {
+      if (this.myMarkerMetadata.firstName && this.myMarkerMetadata.lastName && this.myMarkerMetadata.email && this.myMarkerMetadata.house && this.myMarker) {
         const newSpot = new Spot();
         const newSpotProfile = new SpotProfile();
         const spotProfileACL = new Parse.ACL();
@@ -396,8 +397,8 @@ export default {
     top: 0;
     right: 0;
     height: 100%;
-    width: 60%;
-    max-width: 40rem;
+    width: 70%;
+    max-width: 42rem;
   }
 }
 

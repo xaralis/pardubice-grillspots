@@ -89,8 +89,12 @@ b, strong {
     display: block;
     border: 0;
     background-color: rgba(255, 255, 255, 0.8);
-    font-size: 1.5rem;
     transition: background-color .3s ease-in-out;
+    font-size: 1rem;
+
+    @media (min-width: 768px) {
+      font-size: 1.5rem;
+    }
   }
 
   input:focus, input:hover, textarea:focus, textarea:hover {
@@ -100,7 +104,11 @@ b, strong {
 
   input::placeholder, textarea::placeholder {
     color: rgba(0, 0, 0, 0.4);
-    font-size: 1.5rem;
+    font-size: 1rem;
+
+    @media (min-width: 768px) {
+      font-size: 1.5rem;
+    }
   }
 }
 
