@@ -323,6 +323,7 @@ export default {
 
   @media (min-width: 768px) {
     font-size: 1.5rem;
+    padding: 6rem 2rem;
   }
 
   &-content {
