@@ -4,6 +4,10 @@
       <l-tile-layer :url="url" :attribution="attribution"></l-tile-layer>
     </l-map>
 
+    <div class="save-msg save-msg-error" v-if="areaMismatchDisplayed">
+      Návrh umístění griloviště je možné podat pouze pro městský obvod Pardubice V (Dukla, Jesničánky, Višňovka a Dražkovice).
+    </div>
+
     <div class="save-msg save-msg-success" v-if="saved">
       3. Děkujeme, <strong>váš podnět byl odeslán</strong>. Překontrolujeme ho a následně ho uveřejníme.
     </div>
@@ -96,6 +100,24 @@ const palette = {
   },
 };
 
+function isPointInPoly(latlng, poly) {
+    var inside = false;
+    var x = latlng.lat, y = latlng.lng;
+    for (var ii=0;ii<poly.getLatLngs().length;ii++){
+        var polyPoints = poly.getLatLngs()[ii];
+        for (var i = 0, j = polyPoints.length - 1; i < polyPoints.length; j = i++) {
+            var xi = polyPoints[i].lat, yi = polyPoints[i].lng;
+            var xj = polyPoints[j].lat, yj = polyPoints[j].lng;
+
+            var intersect = ((yi > y) != (yj > y))
+                && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+            if (intersect) inside = !inside;
+        }
+    }
+
+    return inside;
+}
+
 Object.keys(palette).forEach(key => {
   palette[key].marker = new L.Icon({
     iconUrl: palette[key].icon,
@@ -104,6 +126,35 @@ Object.keys(palette).forEach(key => {
     // popupAnchor: [25, 16],
   });
 });
+
+// Masking API
+// credits: https://github.com/turban/Leaflet.Mask
+L.Mask = L.Polygon.extend({
+	options: {
+    stroke: true,
+    weight: 1,
+		color: '#000',
+		fillOpacity: 0.45,
+		clickable: false,
+
+		outerBounds: new L.LatLngBounds([-90, -360], [90, 360])
+	},
+
+	initialize: function (latLngs, options) {
+      let outerBoundsLatLngs = [
+        this.options.outerBounds.getSouthWest(),
+        this.options.outerBounds.getNorthWest(),
+        this.options.outerBounds.getNorthEast(),
+        this.options.outerBounds.getSouthEast()
+      ];
+      L.Polygon.prototype.initialize.call(this, [outerBoundsLatLngs, latLngs], options);
+	},
+
+});
+
+L.mask = function (latLngs, options) {
+	return new L.Mask(latLngs, options);
+};
 
 export default {
   props: {
@@ -123,6 +174,7 @@ export default {
     return {
       // Future map reference
       map: null,
+      districtMask: null,
       myMarker: null,
       myMarkerMetadata: {
         firstName: null,
@@ -135,6 +187,7 @@ export default {
       formDisplayed: false,
       saved: false,
       errored: false,
+      areaMismatchDisplayed: false,
       zoom: 15,
       url:`https://api.mapbox.com/styles/v1/xaralis/ck4oblwty0fgk1fjzxmqow2r5/tiles/256/{z}/{x}/{y}@2x?access_token=${this.accessToken}`,
       attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
@@ -148,7 +201,11 @@ export default {
     onMapClick(evt) {
       this.errored = false;
 
-      if (!this.saved) {
+      const isInArea = !isPointInPoly(evt.latlng, this.districtMask);
+
+      if (isInArea && !this.saved) {
+        this.areaMismatchDisplayed = false;
+
         if (this.myMarker) {
           this.myMarker.removeFrom(this.map);
         }
@@ -156,6 +213,9 @@ export default {
         this.myMarker = new L.marker(evt.latlng, { icon: palette.yellow.marker }).addTo(this.map).bindTooltip('Vaše nové griloviště').on('click', this.onMarkerClick);
         this.showForm();
         this.panToMyMarker();
+      } else {
+        this.areaMismatchDisplayed = true;
+        this.closeForm();
       }
     },
 
@@ -167,6 +227,7 @@ export default {
       currentMarker.openTooltip();
 
       if (currentMarker === this.myMarker) {
+        this.areaMismatchDisplayed = false;
         if (!this.saved) {
           this.showForm();
         }
@@ -205,6 +266,13 @@ export default {
         marker.bindTooltip(`Návrh od ${marker.$spot.attributes.posted_by} z ${marker.$spot.createdAt.toLocaleDateString()}`);
         marker.addTo(this.map).on('click', this.onMarkerClick);
       });
+    },
+
+    onDistrictBoundaryLoaded(results) {
+      // transform geojson coordinates into an array of L.LatLng
+      const latLngs = results.geometry.coordinates[0].map(coords => new L.LatLng(coords[1], coords[0]));
+      this.districtMask = L.mask(latLngs);
+      this.districtMask.addTo(this.map);
     },
 
     showForm() {
@@ -272,10 +340,16 @@ export default {
     this.$nextTick(() => {
       this.map = this.$refs.map.mapObject;
       // MO V center
-      this.map.panTo(new L.LatLng(50.026692, 15.764433));
+      this.map.panTo(new L.LatLng(50.020904, 15.771403));
 
       // Load current dataset from parse
       new Parse.Query(SpotProfile).equalTo('published', true).find().then(this.onSpotsLoaded);
+
+      fetch(require('../assets/pardubice-mo-v.geojson')).then(async response => {
+        if (response.status === 200) {
+          this.onDistrictBoundaryLoaded(await response.json());
+        }
+      });
 
       // Map click handler
       this.map.on('click', this.onMapClick);
@@ -363,7 +437,8 @@ export default {
 
   h1 {
     margin: 0;
-    text-shadow: 0 0 1rem #ffffff;
+    color: #fff;
+    text-shadow: 0 0 .3rem #000;
   }
 }
 
@@ -434,9 +509,14 @@ export default {
   position: absolute;
   bottom: 0;
   z-index: 2;
-  padding: 2rem 3rem;
+  padding: 1rem 1rem;
   color: #fff;
-  font-size: 1.5rem;
+  font-size: 1rem;
+
+  @media (min-width: 512px) {
+    font-size: 1.5rem;
+    padding: 2rem 3rem;
+  }
 
   &-success {
     background: #000;
